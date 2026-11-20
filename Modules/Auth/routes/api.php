@@ -1,18 +1,14 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
-/*
-|--------------------------------------------------------------------------
-| Auth Module API Routes
-|--------------------------------------------------------------------------
-|
-| POST /api/auth/register
-| POST /api/auth/login
-| POST /api/auth/logout
-|
-*/
+use Modules\Auth\Http\Controllers\AuthController;
 
 Route::prefix('auth')->name('auth.')->group(function () {
-    // Routes will be registered in Phase 2.
+    Route::post('register', [AuthController::class, 'register'])->name('register');
+    Route::post('login', [AuthController::class, 'login'])->name('login');
+
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('logout', [AuthController::class, 'logout'])->name('logout');
+        Route::get('me', [AuthController::class, 'me'])->name('me');
+    });
 });

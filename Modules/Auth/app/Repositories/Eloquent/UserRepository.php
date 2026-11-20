@@ -1,0 +1,19 @@
+<?php
+
+namespace Modules\Auth\Repositories\Eloquent;
+
+use App\Models\User;
+use Modules\Auth\Repositories\Contracts\UserRepositoryInterface;
+
+class UserRepository implements UserRepositoryInterface
+{
+    public function create(array $attributes): User
+    {
+        return User::query()->create($attributes);
+    }
+
+    public function findByEmail(string $email): ?User
+    {
+        return User::query()->where('email', $email)->first();
+    }
+}
