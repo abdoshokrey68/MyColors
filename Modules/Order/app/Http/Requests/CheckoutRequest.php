@@ -1,0 +1,23 @@
+<?php
+
+namespace Modules\Order\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class CheckoutRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function rules(): array
+    {
+        return [
+            'promotion_code' => ['sometimes', 'nullable', 'string', 'max:50'],
+        ];
+    }
+}

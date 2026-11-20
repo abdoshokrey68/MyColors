@@ -4,6 +4,8 @@ namespace Modules\Order\Providers;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Modules\Order\Repositories\Contracts\OrderRepositoryInterface;
+use Modules\Order\Repositories\Eloquent\OrderRepository;
 use Nwidart\Modules\Traits\PathNamespace;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -34,6 +36,8 @@ class OrderServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->bind(OrderRepositoryInterface::class, OrderRepository::class);
+
         $this->app->register(EventServiceProvider::class);
         $this->app->register(RouteServiceProvider::class);
     }

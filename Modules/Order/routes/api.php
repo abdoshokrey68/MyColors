@@ -1,19 +1,14 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
-/*
-|--------------------------------------------------------------------------
-| Order Module API Routes
-|--------------------------------------------------------------------------
-|
-| POST   /api/checkout
-| GET    /api/orders
-| GET    /api/orders/{id}
-| POST   /api/orders/{id}/cancel
-|
-*/
+use Modules\Order\Http\Controllers\CheckoutController;
+use Modules\Order\Http\Controllers\OrderController;
 
 Route::middleware('auth:sanctum')->group(function () {
-    // Routes will be registered in later phases.
+    Route::post('checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+
+    Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('orders/{id}', [OrderController::class, 'show'])
+        ->whereNumber('id')
+        ->name('orders.show');
 });

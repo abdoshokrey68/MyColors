@@ -21,4 +21,6 @@ interface CartRepositoryInterface
     public function updateItemQuantity(CartItem $item, int $quantity): CartItem;
 
     public function deleteItem(CartItem $item): void;
+
+    public function clearItems(Cart $cart): void;
 }

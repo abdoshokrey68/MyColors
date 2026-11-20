@@ -58,4 +58,9 @@ class CartRepository implements CartRepositoryInterface
     {
         $item->delete();
     }
+
+    public function clearItems(Cart $cart): void
+    {
+        $cart->items()->delete();
+    }
 }

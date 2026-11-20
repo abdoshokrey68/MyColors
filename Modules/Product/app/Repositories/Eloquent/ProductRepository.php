@@ -4,6 +4,7 @@ namespace Modules\Product\Repositories\Eloquent;
 
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Modules\Product\DTOs\ProductListFilters;
 use Modules\Product\Models\Product;
 use Modules\Product\Repositories\Contracts\ProductRepositoryInterface;
@@ -35,6 +36,25 @@ class ProductRepository implements ProductRepositoryInterface
     public function findById(int $id): ?Product
     {
         return Product::query()->find($id);
+    }
+
+    public function lockForUpdateByIds(array $ids): Collection
+    {
+        if ($ids === []) {
+            return collect();
+        }
+
+        return Product::query()
+            ->whereIn('id', $ids)
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get()
+            ->keyBy('id');
+    }
+
+    public function decrementStock(Product $product, int $quantity): void
+    {
+        $product->decrement('stock_quantity', $quantity);
     }
 
     private function applyFilters(Builder $query, ProductListFilters $filters): void
