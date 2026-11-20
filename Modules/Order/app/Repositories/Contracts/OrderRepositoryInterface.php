@@ -19,4 +19,8 @@ interface OrderRepositoryInterface
     public function findForUser(User $user, int $orderId): ?Order;
 
     public function findById(int $orderId): ?Order;
+
+    public function lockForUpdateForUser(User $user, int $orderId): ?Order;
+
+    public function markAsCancelled(Order $order): Order;
 }

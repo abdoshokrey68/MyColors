@@ -24,4 +24,6 @@ interface ProductRepositoryInterface
     public function lockForUpdateByIds(array $ids): Collection;
 
     public function decrementStock(Product $product, int $quantity): void;
+
+    public function incrementStock(Product $product, int $quantity): void;
 }

@@ -57,6 +57,11 @@ class ProductRepository implements ProductRepositoryInterface
         $product->decrement('stock_quantity', $quantity);
     }
 
+    public function incrementStock(Product $product, int $quantity): void
+    {
+        $product->increment('stock_quantity', $quantity);
+    }
+
     private function applyFilters(Builder $query, ProductListFilters $filters): void
     {
         if ($filters->search) {

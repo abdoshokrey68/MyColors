@@ -41,4 +41,14 @@ class OrderController extends BaseController
             'Order retrieved successfully.'
         );
     }
+
+    public function cancel(Request $request, int $id): JsonResponse
+    {
+        $order = $this->orders->cancel($request->user(), $id);
+
+        return $this->success(
+            new OrderResource($order),
+            'Order cancelled successfully.'
+        );
+    }
 }

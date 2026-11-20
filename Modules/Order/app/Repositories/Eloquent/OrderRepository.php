@@ -4,6 +4,7 @@ namespace Modules\Order\Repositories\Eloquent;
 
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Modules\Order\Enums\OrderStatus;
 use Modules\Order\Models\Order;
 use Modules\Order\Repositories\Contracts\OrderRepositoryInterface;
 
@@ -37,5 +38,22 @@ class OrderRepository implements OrderRepositoryInterface
     public function findById(int $orderId): ?Order
     {
         return Order::query()->with('items')->find($orderId);
+    }
+
+    public function lockForUpdateForUser(User $user, int $orderId): ?Order
+    {
+        return Order::query()
+            ->where('user_id', $user->id)
+            ->whereKey($orderId)
+            ->with('items')
+            ->lockForUpdate()
+            ->first();
+    }
+
+    public function markAsCancelled(Order $order): Order
+    {
+        $order->update(['status' => OrderStatus::Cancelled]);
+
+        return $order->refresh()->load('items');
     }
 }
