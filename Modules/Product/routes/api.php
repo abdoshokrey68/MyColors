@@ -1,17 +1,11 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
-/*
-|--------------------------------------------------------------------------
-| Product Module API Routes
-|--------------------------------------------------------------------------
-|
-| GET /api/products
-| GET /api/products/{id}
-|
-*/
+use Modules\Product\Http\Controllers\ProductController;
 
 Route::prefix('products')->name('products.')->group(function () {
-    // Routes will be registered in Phase 2.
+    Route::get('/', [ProductController::class, 'index'])->name('index');
+    Route::get('{id}', [ProductController::class, 'show'])
+        ->whereNumber('id')
+        ->name('show');
 });

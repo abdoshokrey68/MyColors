@@ -25,6 +25,7 @@ Thumbs.db
 
 # Assessment brief (keep local)
 Requirements.md
+Phases.md
 
 # Local AI / editor MCP overrides (keep .cursor/rules and skills tracked)
 .mcp.json
