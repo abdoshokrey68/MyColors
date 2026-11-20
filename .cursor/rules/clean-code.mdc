@@ -1,0 +1,40 @@
+---
+description: Clean code and Laravel quality bar for a professional assessment
+globs: **/*.php
+alwaysApply: false
+---
+
+# Clean Code
+
+## Naming
+
+- Classes: nouns (`CheckoutService`, `OrderRepository`).
+- Methods: verbs (`addItem`, `applyCoupon`, `cancel`).
+- Booleans: `isActive`, `hasStock`, `canBeCancelled`.
+- Avoid vague names: `handle`, `process`, `data`, `temp`.
+
+## Code quality
+
+- One class, one responsibility; one method, one job.
+- Early returns over deep nesting.
+- No commented-out code; no `dd()` / `dump()` in commits.
+- Prefer Enums for statuses and promotion types.
+- Use FormRequests + Resources; avoid fat `Request $request` arrays leaking everywhere.
+- Database work that must be atomic → `DB::transaction()`.
+- Index foreign keys and columns used in filters/search (document why in README later).
+
+## Testing mindset
+
+- Feature tests for critical flows: auth, cart stock limits, checkout concurrency, cancel restore stock.
+- Factories/seeders for products, coupons, users.
+- Tests prove behavior; don't add throwaway tinker scripts.
+
+## Assessment priorities
+
+Reviewers care more about design quality than feature count:
+
+1. Correctness under concurrency (no negative stock)
+2. Clear modular + repository design
+3. Validation & error handling
+4. Readable, consistent API
+5. Documented trade-offs in README (when deliverables phase)

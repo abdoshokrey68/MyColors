@@ -1,0 +1,60 @@
+---
+description: Repository pattern conventions for MyColors modules
+globs: Modules/**/*Repository*.php,Modules/**/Repositories/**/*.php,Modules/**/Services/**/*.php,Modules/**/Providers/*ServiceProvider.php
+alwaysApply: false
+---
+
+# Repository Pattern
+
+## Structure
+
+```
+Modules/{Name}/app/Repositories/Contracts/{Entity}RepositoryInterface.php
+Modules/{Name}/app/Repositories/Eloquent/{Entity}Repository.php
+```
+
+Bind interfaces in the module `ServiceProvider`:
+
+```php
+$this->app->bind(ProductRepositoryInterface::class, ProductRepository::class);
+```
+
+## Repository responsibilities
+
+- Encapsulate Eloquent queries and persistence.
+- Expose intention-revealing methods: `findActiveById`, `decrementStock`, `lockForUpdate`.
+- Return models/collections/primitives — not HTTP responses.
+- For concurrency (checkout): use `lockForUpdate()` inside a DB transaction owned by the Service.
+
+## Service responsibilities
+
+- Orchestrate repositories + domain rules.
+- Own `DB::transaction()` for checkout/cancel.
+- Throw domain exceptions (e.g. `InsufficientStockException`) — Controllers map them to HTTP.
+
+## Rules
+
+- Never inject Eloquent Models into Controllers for querying.
+- Never put SQL/query builder chains in Controllers or FormRequests.
+- Prefer interfaces in Service constructors for testability.
+- Keep repositories free of discount/checkout business rules.
+
+```php
+// ❌ BAD
+class CheckoutService {
+    public function checkout($user) {
+        Product::where('id', $id)->update(['stock' => ...]);
+    }
+}
+
+// ✅ GOOD
+class CheckoutService {
+    public function __construct(private ProductRepositoryInterface $products) {}
+    public function checkout($user) {
+        return DB::transaction(function () use ($user) {
+            $product = $this->products->lockForUpdate($id);
+            $this->products->decrementStock($product, $qty);
+        });
+    }
+}
+```

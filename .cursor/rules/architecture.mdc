@@ -1,0 +1,65 @@
+---
+description: MyColors modular architecture, layers, and repository pattern
+alwaysApply: true
+---
+
+# MyColors Architecture
+
+This is a Laravel 12 REST API assessment: E-Commerce Order & Promotion API.
+
+## Mandatory patterns
+
+- **Modular**: domain code lives in `Modules/{Auth,Product,Cart,Promotion,Order}`.
+- **Repository pattern**: controllers never query Eloquent directly for business reads/writes.
+- **Service layer**: business rules (checkout, discounts, stock) live in Services, not controllers.
+- **Clean code**: small methods, explicit names, no god classes, no duplicated logic.
+
+## Layer flow
+
+```
+Route → FormRequest → Controller → Service → Repository → Model
+                         ↓
+                    API Resource / JsonResponse
+```
+
+- Controllers: HTTP only (status codes, resources, calling services).
+- Services: use-cases, transactions, domain rules.
+- Repositories: persistence only (queries, locks, inserts/updates).
+- Models: relations, casts, scopes — no checkout/cart business logic.
+
+## Module layout
+
+```
+Modules/{Name}/
+  app/Http/Controllers|Requests|Resources
+  app/Models|Enums|Services|Repositories
+  app/Providers
+  database/migrations|factories|seeders
+  routes/api.php
+  tests/Feature|Unit
+```
+
+Do not put domain logic in `app/` except shared API base classes (`App\Http\Controllers\Api\BaseController`).
+
+## Cross-module rules
+
+- Prefer interfaces/contracts for repositories bound in the module ServiceProvider.
+- Order/Cart may depend on Product/Promotion via repository interfaces — never reach into another module's private internals casually.
+- Keep modules API-only (no web views/assets unless explicitly required).
+
+## Do / Don't
+
+```php
+// ❌ BAD — fat controller + direct Eloquent
+public function store(Request $request) {
+    $product = Product::find($request->product_id);
+    if ($product->stock_quantity < $request->qty) abort(400);
+    CartItem::create([...]);
+}
+
+// ✅ GOOD — thin controller
+public function store(AddCartItemRequest $request) {
+    $item = $this->cartService->addItem($request->user(), $request->validated());
+    return $this->success(new CartItemResource($item), 'Item added', 201);
+}
+```

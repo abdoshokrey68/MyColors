@@ -1,0 +1,35 @@
+---
+description: Migrations, inventory, and concurrency guidelines
+globs: Modules/**/database/**/*.php,database/**/*.php,Modules/**/Models/**/*.php
+alwaysApply: false
+---
+
+# Database & Concurrency
+
+## Migrations
+
+- Put domain migrations inside the owning module (`Modules/{Name}/database/migrations`).
+- Use descriptive columns; add FKs with cascade/restrict intentionally.
+- Order items must snapshot `product_name`, `sku`, and `price` at purchase time.
+- Prefer unsigned integers for money in minor units **or** `decimal(12,2)` — pick one approach and stay consistent (document it).
+
+## Inventory safety
+
+Checkout must never allow negative stock under concurrent requests:
+
+```php
+DB::transaction(function () {
+    $product = $this->products->lockForUpdate($productId);
+    if ($product->stock_quantity < $qty) {
+        throw new InsufficientStockException();
+    }
+    $this->products->decrementStock($product, $qty);
+});
+```
+
+- Prefer row locking (`lockForUpdate`) or atomic `WHERE stock_quantity >= ?` updates.
+- Cancellation restores stock inside a transaction and is idempotent (repeat cancel is safe).
+
+## Indexes
+
+Add indexes for: `products.sku` (unique), price/status filters, `orders.user_id`, `orders.status`, promotion `code` (unique).

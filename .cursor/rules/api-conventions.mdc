@@ -1,0 +1,42 @@
+---
+description: REST API response, validation, and controller conventions
+globs: Modules/**/Http/**/*.php,Modules/**/routes/api.php,routes/api.php,app/Http/Controllers/Api/**/*.php
+alwaysApply: false
+---
+
+# API Conventions
+
+## Responses
+
+Use `App\Http\Controllers\Api\BaseController`:
+
+- Success: `{ success: true, message, data }`
+- Error: `{ success: false, message, errors? }`
+- Prefer API Resources for model payloads.
+- Never trust client-sent prices/totals — recalculate on the server.
+
+## Controllers
+
+- Thin: authorize → call service → return resource.
+- Type-hint FormRequests for validation.
+- Protect cart/order/checkout with `auth:sanctum`.
+- Products listing/details are public unless specified otherwise.
+
+## Validation & HTTP status
+
+| Case | Status |
+|------|--------|
+| Validation failed | 422 |
+| Unauthenticated | 401 |
+| Forbidden | 403 |
+| Not found | 404 |
+| Insufficient stock / business rule | 422 or 409 |
+| Conflict (concurrency) | 409 |
+
+Meaningful messages for: product not found, insufficient stock, invalid/expired coupon, usage limit, empty cart, invalid order status, unauthorized order access.
+
+## Routes
+
+- Module routes in `Modules/*/routes/api.php` (already prefixed with `api`).
+- Prefer explicit routes over fat `apiResource` when only a subset is needed.
+- Keep URL shapes aligned with Requirements (`/products`, `/cart/items`, `/checkout`, `/orders`).
