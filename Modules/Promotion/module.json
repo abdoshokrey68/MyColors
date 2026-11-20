@@ -1,0 +1,11 @@
+{
+    "name": "Promotion",
+    "alias": "promotion",
+    "description": "Promotional codes with percentage/fixed discounts and usage limits.",
+    "keywords": ["promotion", "coupon", "discount"],
+    "priority": 40,
+    "providers": [
+        "Modules\\Promotion\\Providers\\PromotionServiceProvider"
+    ],
+    "files": []
+}

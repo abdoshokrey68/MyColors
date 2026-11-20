@@ -1,0 +1,11 @@
+{
+    "name": "Order",
+    "alias": "order",
+    "description": "Checkout, order creation, cancellation, and concurrency-safe inventory updates.",
+    "keywords": ["order", "checkout", "concurrency"],
+    "priority": 50,
+    "providers": [
+        "Modules\\Order\\Providers\\OrderServiceProvider"
+    ],
+    "files": []
+}

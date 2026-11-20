@@ -1,0 +1,11 @@
+{
+    "name": "Cart",
+    "alias": "cart",
+    "description": "Authenticated customer shopping cart with stock-aware item management.",
+    "keywords": ["cart", "checkout"],
+    "priority": 30,
+    "providers": [
+        "Modules\\Cart\\Providers\\CartServiceProvider"
+    ],
+    "files": []
+}

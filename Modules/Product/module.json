@@ -1,0 +1,11 @@
+{
+    "name": "Product",
+    "alias": "product",
+    "description": "Product catalog, search, filtering, sorting, and inventory stock.",
+    "keywords": ["product", "catalog", "inventory"],
+    "priority": 20,
+    "providers": [
+        "Modules\\Product\\Providers\\ProductServiceProvider"
+    ],
+    "files": []
+}
