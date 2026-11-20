@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Modules\Product\Database\Seeders\ProductDatabaseSeeder;
+use Modules\Promotion\Database\Seeders\PromotionDatabaseSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -21,6 +22,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             ProductDatabaseSeeder::class,
+            PromotionDatabaseSeeder::class,
         ]);
     }
 }

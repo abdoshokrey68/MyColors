@@ -4,6 +4,8 @@ namespace Modules\Promotion\Providers;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Modules\Promotion\Repositories\Contracts\PromotionRepositoryInterface;
+use Modules\Promotion\Repositories\Eloquent\PromotionRepository;
 use Nwidart\Modules\Traits\PathNamespace;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -34,6 +36,8 @@ class PromotionServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->bind(PromotionRepositoryInterface::class, PromotionRepository::class);
+
         $this->app->register(EventServiceProvider::class);
         $this->app->register(RouteServiceProvider::class);
     }

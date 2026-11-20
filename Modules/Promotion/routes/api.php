@@ -1,17 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Promotion\Http\Controllers\PromotionController;
 
-/*
-|--------------------------------------------------------------------------
-| Promotion Module API Routes
-|--------------------------------------------------------------------------
-|
-| Coupon validation is applied during checkout.
-| Admin coupon management can live here as a bonus.
-|
-*/
-
-Route::prefix('promotions')->name('promotions.')->group(function () {
-    // Routes will be registered in later phases.
+Route::middleware('auth:sanctum')->prefix('promotions')->name('promotions.')->group(function () {
+    Route::post('validate', [PromotionController::class, 'validateCode'])->name('validate');
 });
