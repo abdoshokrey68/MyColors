@@ -4,6 +4,8 @@ namespace Modules\Cart\Providers;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Modules\Cart\Repositories\Contracts\CartRepositoryInterface;
+use Modules\Cart\Repositories\Eloquent\CartRepository;
 use Nwidart\Modules\Traits\PathNamespace;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -34,6 +36,8 @@ class CartServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->bind(CartRepositoryInterface::class, CartRepository::class);
+
         $this->app->register(EventServiceProvider::class);
         $this->app->register(RouteServiceProvider::class);
     }
