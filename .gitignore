@@ -22,3 +22,10 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Assessment brief (keep local)
+Requirements.md
+
+# Local AI / editor MCP overrides
+.mcp.json
+.cursor/mcp.json
