@@ -5,6 +5,8 @@ namespace Modules\Product\Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Modules\Cart\Models\Cart;
+use Modules\Cart\Models\CartItem;
 use Modules\Product\Enums\ProductStatus;
 use Modules\Product\Models\Product;
 use Tests\TestCase;
@@ -41,10 +43,20 @@ class AdminProductApiTest extends TestCase
         $this->assertDatabaseHas('products', ['sku' => 'ADMIN-TEE-01']);
     }
 
-    public function test_admin_can_update_and_delete_product(): void
+    public function test_admin_delete_deactivates_product_even_when_in_cart(): void
     {
         Sanctum::actingAs(User::factory()->admin()->create());
-        $product = Product::factory()->create(['sku' => 'TMP-01']);
+        $product = Product::factory()->create(['sku' => 'TMP-01', 'status' => ProductStatus::Active]);
+
+        $customer = User::factory()->create();
+        $cart = Cart::query()->firstOrCreate(['user_id' => $customer->id]);
+        CartItem::query()->create([
+            'cart_id' => $cart->id,
+            'product_id' => $product->id,
+            'quantity' => 1,
+        ]);
+
+        Sanctum::actingAs(User::factory()->admin()->create());
 
         $this->patchJson('/api/admin/products/'.$product->id, [
             'price' => 55.5,
@@ -54,6 +66,25 @@ class AdminProductApiTest extends TestCase
         $this->deleteJson('/api/admin/products/'.$product->id)
             ->assertOk();
 
-        $this->assertDatabaseMissing('products', ['id' => $product->id]);
+        $this->assertDatabaseHas('products', [
+            'id' => $product->id,
+            'status' => ProductStatus::Inactive->value,
+        ]);
+        $this->assertDatabaseHas('cart_items', [
+            'product_id' => $product->id,
+        ]);
+
+        Sanctum::actingAs($customer);
+        $this->postJson('/api/checkout')
+            ->assertNotFound()
+            ->assertJsonPath('success', false);
+    }
+
+    public function test_admin_index_rejects_per_page_over_limit(): void
+    {
+        Sanctum::actingAs(User::factory()->admin()->create());
+
+        $this->getJson('/api/admin/products?per_page=101')
+            ->assertUnprocessable();
     }
 }
