@@ -3,6 +3,8 @@
 namespace Modules\Order\Providers;
 
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
+use Modules\Order\Events\OrderPlaced;
+use Modules\Order\Listeners\ProcessOrderPlaced;
 
 class EventServiceProvider extends ServiceProvider
 {
@@ -11,7 +13,11 @@ class EventServiceProvider extends ServiceProvider
      *
      * @var array<string, array<int, string>>
      */
-    protected $listen = [];
+    protected $listen = [
+        OrderPlaced::class => [
+            ProcessOrderPlaced::class,
+        ],
+    ];
 
     /**
      * Indicates if events should be discovered.
