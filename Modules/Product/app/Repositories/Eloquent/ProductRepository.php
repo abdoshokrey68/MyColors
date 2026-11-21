@@ -5,7 +5,6 @@ namespace Modules\Product\Repositories\Eloquent;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
 use Modules\Product\DTOs\ProductListFilters;
 use Modules\Product\Models\Product;
 use Modules\Product\Repositories\Contracts\ProductRepositoryInterface;
@@ -56,13 +55,11 @@ class ProductRepository implements ProductRepositoryInterface
     public function decrementStock(Product $product, int $quantity): void
     {
         $product->decrement('stock_quantity', $quantity);
-        Cache::forever('products:list:version', now()->timestamp);
     }
 
     public function incrementStock(Product $product, int $quantity): void
     {
         $product->increment('stock_quantity', $quantity);
-        Cache::forever('products:list:version', now()->timestamp);
     }
 
     public function create(array $attributes): Product

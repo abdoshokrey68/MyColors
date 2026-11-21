@@ -4,7 +4,9 @@ namespace Modules\Product\Services;
 
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Modules\Product\DTOs\ProductListFilters;
+use Modules\Product\Enums\ProductStatus;
 use Modules\Product\Exceptions\ProductNotFoundException;
 use Modules\Product\Models\Product;
 use Modules\Product\Repositories\Contracts\ProductRepositoryInterface;
@@ -84,7 +86,10 @@ class ProductService
             throw new ProductNotFoundException;
         }
 
-        $this->products->delete($product);
+        $this->products->update($product, [
+            'status' => ProductStatus::Inactive,
+        ]);
+
         $this->flushListingCache();
     }
 
@@ -95,6 +100,20 @@ class ProductService
 
     public function flushListingCache(): void
     {
-        Cache::forever(self::LIST_VERSION_KEY, now()->timestamp);
+        $bump = function (): void {
+            if (! Cache::has(self::LIST_VERSION_KEY)) {
+                Cache::forever(self::LIST_VERSION_KEY, 1);
+            }
+
+            Cache::increment(self::LIST_VERSION_KEY);
+        };
+
+        if (DB::transactionLevel() > 0) {
+            DB::afterCommit($bump);
+
+            return;
+        }
+
+        $bump();
     }
 }
