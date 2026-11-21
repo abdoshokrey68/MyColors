@@ -11,12 +11,14 @@ use Modules\Order\Exceptions\OrderNotFoundException;
 use Modules\Order\Models\Order;
 use Modules\Order\Repositories\Contracts\OrderRepositoryInterface;
 use Modules\Product\Repositories\Contracts\ProductRepositoryInterface;
+use Modules\Product\Services\ProductService;
 
 class OrderService
 {
     public function __construct(
         private readonly OrderRepositoryInterface $orders,
         private readonly ProductRepositoryInterface $products,
+        private readonly ProductService $productService,
     ) {}
 
     public function listForUser(User $user, int $perPage = 15): LengthAwarePaginator
@@ -77,6 +79,8 @@ class OrderService
                     $this->products->incrementStock($product, $item->quantity);
                 }
             }
+
+            $this->productService->flushListingCache();
 
             return $this->orders->markAsCancelled($order);
         }, 5);

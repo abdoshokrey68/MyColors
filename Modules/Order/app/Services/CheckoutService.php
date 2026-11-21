@@ -7,12 +7,14 @@ use Illuminate\Support\Facades\DB;
 use Modules\Cart\Exceptions\InsufficientStockException;
 use Modules\Cart\Repositories\Contracts\CartRepositoryInterface;
 use Modules\Order\Enums\OrderStatus;
+use Modules\Order\Events\OrderPlaced;
 use Modules\Order\Exceptions\EmptyCartException;
 use Modules\Order\Models\Order;
 use Modules\Order\Repositories\Contracts\OrderRepositoryInterface;
 use Modules\Product\Enums\ProductStatus;
 use Modules\Product\Exceptions\ProductNotFoundException;
 use Modules\Product\Repositories\Contracts\ProductRepositoryInterface;
+use Modules\Product\Services\ProductService;
 use Modules\Promotion\Repositories\Contracts\PromotionRepositoryInterface;
 use Modules\Promotion\Services\PromotionService;
 
@@ -21,6 +23,7 @@ class CheckoutService
     public function __construct(
         private readonly CartRepositoryInterface $carts,
         private readonly ProductRepositoryInterface $products,
+        private readonly ProductService $productService,
         private readonly OrderRepositoryInterface $orders,
         private readonly PromotionService $promotions,
         private readonly PromotionRepositoryInterface $promotionRepository,
@@ -105,6 +108,8 @@ class CheckoutService
                 $this->products->decrementStock($product, $item->quantity);
             }
 
+            $this->productService->flushListingCache();
+
             if ($evaluation) {
                 $this->promotionRepository->incrementUsedCount($evaluation->promotion);
                 $this->promotionRepository->recordUsage(
@@ -116,7 +121,11 @@ class CheckoutService
 
             $this->carts->clearItems($cart);
 
-            return $order->load('items');
+            $order = $order->load('items');
+
+            OrderPlaced::dispatch($order);
+
+            return $order;
         }, 5);
     }
 }
