@@ -23,6 +23,18 @@ class CartRepository implements CartRepositoryInterface
         return $cart->load(['items.product']);
     }
 
+    public function lockForUserWithItems(User $user): Cart
+    {
+        $this->findOrCreateForUser($user);
+
+        $cart = Cart::query()
+            ->where('user_id', $user->id)
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        return $cart->fresh(['items.product']) ?? $cart->load(['items.product']);
+    }
+
     public function findItemForUser(User $user, int $itemId): ?CartItem
     {
         return CartItem::query()

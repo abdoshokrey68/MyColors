@@ -12,6 +12,8 @@ interface CartRepositoryInterface
 
     public function getWithItemsForUser(User $user): Cart;
 
+    public function lockForUserWithItems(User $user): Cart;
+
     public function findItemForUser(User $user, int $itemId): ?CartItem;
 
     public function findItemByProduct(Cart $cart, int $productId): ?CartItem;
