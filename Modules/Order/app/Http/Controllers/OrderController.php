@@ -5,6 +5,7 @@ namespace Modules\Order\Http\Controllers;
 use App\Http\Controllers\Api\BaseController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Modules\Order\Http\Requests\OrderIndexRequest;
 use Modules\Order\Http\Resources\OrderResource;
 use Modules\Order\Services\OrderService;
 
@@ -14,7 +15,7 @@ class OrderController extends BaseController
         private readonly OrderService $orders,
     ) {}
 
-    public function index(Request $request): JsonResponse
+    public function index(OrderIndexRequest $request): JsonResponse
     {
         $paginator = $this->orders->listForUser(
             $request->user(),

@@ -4,7 +4,7 @@ namespace Modules\Product\Http\Controllers;
 
 use App\Http\Controllers\Api\BaseController;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use Modules\Product\Http\Requests\AdminProductIndexRequest;
 use Modules\Product\Http\Requests\StoreProductRequest;
 use Modules\Product\Http\Requests\UpdateProductRequest;
 use Modules\Product\Http\Resources\ProductResource;
@@ -16,7 +16,7 @@ class AdminProductController extends BaseController
         private readonly ProductService $products,
     ) {}
 
-    public function index(Request $request): JsonResponse
+    public function index(AdminProductIndexRequest $request): JsonResponse
     {
         $paginator = $this->products->listAllForAdmin(
             (int) $request->integer('per_page', 15)

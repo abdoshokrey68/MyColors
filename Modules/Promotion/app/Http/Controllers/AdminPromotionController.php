@@ -4,7 +4,7 @@ namespace Modules\Promotion\Http\Controllers;
 
 use App\Http\Controllers\Api\BaseController;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use Modules\Promotion\Http\Requests\AdminPromotionIndexRequest;
 use Modules\Promotion\Http\Requests\StorePromotionRequest;
 use Modules\Promotion\Http\Requests\UpdatePromotionRequest;
 use Modules\Promotion\Http\Resources\PromotionResource;
@@ -16,7 +16,7 @@ class AdminPromotionController extends BaseController
         private readonly AdminPromotionService $promotions,
     ) {}
 
-    public function index(Request $request): JsonResponse
+    public function index(AdminPromotionIndexRequest $request): JsonResponse
     {
         $paginator = $this->promotions->list(
             (int) $request->integer('per_page', 15)
