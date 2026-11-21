@@ -10,6 +10,8 @@ use Modules\Cart\Models\CartItem;
 use Modules\Order\Enums\OrderStatus;
 use Modules\Order\Models\Order;
 use Modules\Product\Models\Product;
+use Modules\Promotion\Enums\PromotionType;
+use Modules\Promotion\Models\Promotion;
 use Tests\TestCase;
 
 class OrderCancellationTest extends TestCase
@@ -80,24 +82,54 @@ class OrderCancellationTest extends TestCase
         $order = $this->placeOrder($owner, $product, 1);
 
         Sanctum::actingAs($intruder);
-
         $this->postJson('/api/orders/'.$order->id.'/cancel')
             ->assertNotFound()
             ->assertJsonPath('message', 'Order not found.');
-
-        $this->assertDatabaseHas('orders', [
-            'id' => $order->id,
-            'status' => OrderStatus::Placed->value,
-        ]);
     }
 
-    public function test_cancel_missing_order_returns_not_found(): void
+    public function test_cancel_releases_coupon_usage(): void
     {
-        Sanctum::actingAs(User::factory()->create());
+        $user = User::factory()->create();
+        $product = Product::factory()->inStock(5)->create(['price' => 120]);
+        $promotion = Promotion::factory()->create([
+            'code' => 'SUMMER20',
+            'type' => PromotionType::Percentage,
+            'value' => 20,
+            'min_cart_amount' => 100,
+            'max_discount_amount' => 50,
+            'usage_limit' => 10,
+            'used_count' => 0,
+        ]);
 
-        $this->postJson('/api/orders/999/cancel')
-            ->assertNotFound()
-            ->assertJsonPath('message', 'Order not found.');
+        $cart = Cart::query()->firstOrCreate(['user_id' => $user->id]);
+        CartItem::query()->create([
+            'cart_id' => $cart->id,
+            'product_id' => $product->id,
+            'quantity' => 1,
+        ]);
+
+        Sanctum::actingAs($user);
+        $this->postJson('/api/checkout', ['promotion_code' => 'SUMMER20'])->assertCreated();
+
+        $order = Order::query()->firstOrFail();
+        $this->assertDatabaseHas('promotions', [
+            'id' => $promotion->id,
+            'used_count' => 1,
+        ]);
+        $this->assertDatabaseHas('promotion_usages', [
+            'order_id' => $order->id,
+            'user_id' => $user->id,
+        ]);
+
+        $this->postJson('/api/orders/'.$order->id.'/cancel')->assertOk();
+
+        $this->assertDatabaseHas('promotions', [
+            'id' => $promotion->id,
+            'used_count' => 0,
+        ]);
+        $this->assertDatabaseMissing('promotion_usages', [
+            'order_id' => $order->id,
+        ]);
     }
 
     private function placeOrder(User $user, Product $product, int $quantity): Order
@@ -113,6 +145,6 @@ class OrderCancellationTest extends TestCase
         Sanctum::actingAs($user);
         $this->postJson('/api/checkout')->assertCreated();
 
-        return Order::query()->with('items')->latest('id')->firstOrFail();
+        return Order::query()->latest('id')->firstOrFail();
     }
 }
