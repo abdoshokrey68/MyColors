@@ -25,14 +25,30 @@ class CartRepository implements CartRepositoryInterface
 
     public function lockForUserWithItems(User $user): Cart
     {
-        $this->findOrCreateForUser($user);
-
         $cart = Cart::query()
             ->where('user_id', $user->id)
             ->lockForUpdate()
-            ->firstOrFail();
+            ->first();
 
-        return $cart->fresh(['items.product']) ?? $cart->load(['items.product']);
+        if (! $cart) {
+            $cart = Cart::query()->create([
+                'user_id' => $user->id,
+            ]);
+
+            $cart = Cart::query()
+                ->whereKey($cart->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+        }
+
+        // Locking read: plain eager loads under REPEATABLE READ can return the
+        // transaction's consistent snapshot and miss concurrent cart clears.
+        $cart->setRelation(
+            'items',
+            $cart->items()->with('product')->lockForUpdate()->get()
+        );
+
+        return $cart;
     }
 
     public function findItemForUser(User $user, int $itemId): ?CartItem
