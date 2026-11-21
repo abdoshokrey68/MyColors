@@ -3,6 +3,7 @@
 namespace Modules\Cart\Services;
 
 use App\Models\User;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Modules\Cart\Exceptions\CartItemNotFoundException;
 use Modules\Cart\Exceptions\InsufficientStockException;
 use Modules\Cart\Models\Cart;
@@ -37,7 +38,19 @@ class CartService
         if ($existingItem) {
             $this->carts->updateItemQuantity($existingItem, $desiredQuantity);
         } else {
-            $this->carts->createItem($cart, $product->id, $quantity);
+            try {
+                $this->carts->createItem($cart, $product->id, $quantity);
+            } catch (UniqueConstraintViolationException) {
+                $existingItem = $this->carts->findItemByProduct($cart->fresh(), $product->id);
+
+                if (! $existingItem) {
+                    throw new CartItemNotFoundException('Unable to add item to cart.');
+                }
+
+                $desiredQuantity = $existingItem->quantity + $quantity;
+                $this->assertSufficientStock($product->fresh(), $desiredQuantity);
+                $this->carts->updateItemQuantity($existingItem, $desiredQuantity);
+            }
         }
 
         return $this->carts->getWithItemsForUser($user);
