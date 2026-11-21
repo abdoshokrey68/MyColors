@@ -2,15 +2,16 @@
 
 namespace Modules\Promotion\DTOs;
 
+use App\Support\Money;
 use Modules\Promotion\Models\Promotion;
 
 readonly class PromotionEvaluation
 {
     public function __construct(
         public Promotion $promotion,
-        public float $subtotal,
-        public float $discountAmount,
-        public float $total,
+        public int $subtotalCents,
+        public int $discountCents,
+        public int $totalCents,
     ) {}
 
     /**
@@ -22,9 +23,9 @@ readonly class PromotionEvaluation
             'code' => $this->promotion->code,
             'type' => $this->promotion->type->value,
             'value' => $this->promotion->value,
-            'subtotal' => number_format($this->subtotal, 2, '.', ''),
-            'discount_amount' => number_format($this->discountAmount, 2, '.', ''),
-            'total' => number_format($this->total, 2, '.', ''),
+            'subtotal' => Money::fromCents($this->subtotalCents),
+            'discount_amount' => Money::fromCents($this->discountCents),
+            'total' => Money::fromCents($this->totalCents),
         ];
     }
 }

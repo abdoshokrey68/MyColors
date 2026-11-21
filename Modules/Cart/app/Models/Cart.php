@@ -3,6 +3,7 @@
 namespace Modules\Cart\Models;
 
 use App\Models\User;
+use App\Support\Money;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -23,10 +24,15 @@ class Cart extends Model
         return $this->hasMany(CartItem::class);
     }
 
+    public function subtotalCents(): int
+    {
+        return (int) $this->items->sum(function (CartItem $item): int {
+            return Money::toCents((string) $item->product->price) * $item->quantity;
+        });
+    }
+
     public function subtotal(): float
     {
-        return (float) $this->items->sum(function (CartItem $item): float {
-            return (float) $item->product->price * $item->quantity;
-        });
+        return (float) Money::fromCents($this->subtotalCents());
     }
 }

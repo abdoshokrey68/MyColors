@@ -3,6 +3,7 @@
 namespace Modules\Order\Services;
 
 use App\Models\User;
+use App\Support\Money;
 use Illuminate\Support\Facades\DB;
 use Modules\Cart\Exceptions\InsufficientStockException;
 use Modules\Cart\Repositories\Contracts\CartRepositoryInterface;
@@ -32,7 +33,7 @@ class CheckoutService
     public function checkout(User $user, ?string $promotionCode = null): Order
     {
         return DB::transaction(function () use ($user, $promotionCode) {
-            $cart = $this->carts->getWithItemsForUser($user);
+            $cart = $this->carts->lockForUserWithItems($user);
 
             if ($cart->items->isEmpty()) {
                 throw new EmptyCartException;
@@ -48,7 +49,7 @@ class CheckoutService
 
             $lockedProducts = $this->products->lockForUpdateByIds($productIds);
 
-            $subtotal = 0.0;
+            $subtotalCents = 0;
             $orderItems = [];
 
             foreach ($cart->items as $item) {
@@ -64,41 +65,40 @@ class CheckoutService
                     );
                 }
 
-                $unitPrice = (float) $product->price;
-                $lineTotal = round($unitPrice * $item->quantity, 2);
-                $subtotal += $lineTotal;
+                $unitPriceCents = Money::toCents((string) $product->price);
+                $lineTotalCents = $unitPriceCents * $item->quantity;
+                $subtotalCents += $lineTotalCents;
 
                 $orderItems[] = [
                     'product_id' => $product->id,
                     'product_name' => $product->name,
                     'sku' => $product->sku,
-                    'price' => number_format($unitPrice, 2, '.', ''),
+                    'price' => Money::fromCents($unitPriceCents),
                     'quantity' => $item->quantity,
-                    'line_total' => number_format($lineTotal, 2, '.', ''),
+                    'line_total' => Money::fromCents($lineTotalCents),
                 ];
             }
 
-            $subtotal = round($subtotal, 2);
-            $discountAmount = 0.0;
+            $discountCents = 0;
             $promotionId = null;
             $promotionCodeSnapshot = null;
             $evaluation = null;
 
             if ($promotionCode) {
-                $evaluation = $this->promotions->evaluate($promotionCode, $user, $subtotal);
-                $discountAmount = $evaluation->discountAmount;
+                $evaluation = $this->promotions->evaluateLocked($promotionCode, $user, $subtotalCents);
+                $discountCents = $evaluation->discountCents;
                 $promotionId = $evaluation->promotion->id;
                 $promotionCodeSnapshot = $evaluation->promotion->code;
             }
 
-            $total = max(0, round($subtotal - $discountAmount, 2));
+            $totalCents = max(0, $subtotalCents - $discountCents);
 
             $order = $this->orders->createWithItems([
                 'user_id' => $user->id,
                 'status' => OrderStatus::Placed,
-                'subtotal' => number_format($subtotal, 2, '.', ''),
-                'discount_amount' => number_format($discountAmount, 2, '.', ''),
-                'total' => number_format($total, 2, '.', ''),
+                'subtotal' => Money::fromCents($subtotalCents),
+                'discount_amount' => Money::fromCents($discountCents),
+                'total' => Money::fromCents($totalCents),
                 'promotion_id' => $promotionId,
                 'promotion_code' => $promotionCodeSnapshot,
             ], $orderItems);
@@ -107,8 +107,6 @@ class CheckoutService
                 $product = $lockedProducts->get($item->product_id);
                 $this->products->decrementStock($product, $item->quantity);
             }
-
-            $this->productService->flushListingCache();
 
             if ($evaluation) {
                 $this->promotionRepository->incrementUsedCount($evaluation->promotion);
@@ -120,6 +118,8 @@ class CheckoutService
             }
 
             $this->carts->clearItems($cart);
+
+            $this->productService->flushListingCache();
 
             $order = $order->load('items');
 

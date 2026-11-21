@@ -3,6 +3,7 @@
 namespace Modules\Promotion\Services;
 
 use App\Models\User;
+use App\Support\Money;
 use Modules\Cart\Services\CartService;
 use Modules\Promotion\DTOs\PromotionEvaluation;
 use Modules\Promotion\Enums\PromotionType;
@@ -28,44 +29,63 @@ class PromotionService
             throw new InvalidCouponException('Cannot apply a coupon to an empty cart.');
         }
 
-        return $this->evaluate($code, $user, $cart->subtotal());
+        return $this->evaluate($code, $user, $cart->subtotalCents());
     }
 
-    public function evaluate(string $code, User $user, float $subtotal): PromotionEvaluation
+    public function evaluate(string $code, User $user, int $subtotalCents): PromotionEvaluation
     {
         $promotion = $this->promotions->findByCode(trim($code));
 
+        return $this->evaluatePromotion($promotion, $user, $subtotalCents, lockUsages: false);
+    }
+
+    public function evaluateLocked(string $code, User $user, int $subtotalCents): PromotionEvaluation
+    {
+        $promotion = $this->promotions->lockByCode(trim($code));
+
+        return $this->evaluatePromotion($promotion, $user, $subtotalCents, lockUsages: true);
+    }
+
+    public function calculateDiscount(Promotion $promotion, int $subtotalCents): int
+    {
+        $discountCents = match ($promotion->type) {
+            PromotionType::Percentage => intdiv(
+                $subtotalCents * Money::toCents((string) $promotion->value),
+                10000
+            ),
+            PromotionType::Fixed => Money::toCents((string) $promotion->value),
+        };
+
+        if ($promotion->max_discount_amount !== null) {
+            $discountCents = min($discountCents, Money::toCents((string) $promotion->max_discount_amount));
+        }
+
+        return min($discountCents, $subtotalCents);
+    }
+
+    private function evaluatePromotion(
+        ?Promotion $promotion,
+        User $user,
+        int $subtotalCents,
+        bool $lockUsages = false,
+    ): PromotionEvaluation {
         if (! $promotion || ! $promotion->is_active) {
             throw new InvalidCouponException;
         }
 
         $this->assertWithinDateWindow($promotion);
-        $this->assertUsageLimits($promotion, $user);
-        $this->assertMinimumCartAmount($promotion, $subtotal);
+        $this->assertUsageLimits($promotion, $user, $lockUsages);
+        $this->assertMinimumCartAmount($promotion, $subtotalCents);
 
-        $discount = $this->calculateDiscount($promotion, $subtotal);
-        $total = max(0, round($subtotal - $discount, 2));
+        $discountCents = $this->calculateDiscount($promotion, $subtotalCents);
+        $totalCents = max(0, $subtotalCents - $discountCents);
 
         return new PromotionEvaluation(
             promotion: $promotion,
-            subtotal: round($subtotal, 2),
-            discountAmount: $discount,
-            total: $total,
+            subtotalCents: $subtotalCents,
+            discountCents: $discountCents,
+            totalCents: $totalCents,
         );
-    }
-
-    public function calculateDiscount(Promotion $promotion, float $subtotal): float
-    {
-        $discount = match ($promotion->type) {
-            PromotionType::Percentage => $subtotal * ((float) $promotion->value / 100),
-            PromotionType::Fixed => (float) $promotion->value,
-        };
-
-        if ($promotion->max_discount_amount !== null) {
-            $discount = min($discount, (float) $promotion->max_discount_amount);
-        }
-
-        return round(min($discount, $subtotal), 2);
     }
 
     private function assertWithinDateWindow(Promotion $promotion): void
@@ -81,14 +101,18 @@ class PromotionService
         }
     }
 
-    private function assertUsageLimits(Promotion $promotion, User $user): void
+    private function assertUsageLimits(Promotion $promotion, User $user, bool $lockUsages = false): void
     {
         if ($promotion->usage_limit !== null && $promotion->used_count >= $promotion->usage_limit) {
             throw new CouponUsageLimitReachedException;
         }
 
         if ($promotion->per_customer_usage_limit !== null) {
-            $customerUsages = $this->promotions->countUsagesForUser($promotion, $user->id);
+            $customerUsages = $this->promotions->countUsagesForUser(
+                $promotion,
+                $user->id,
+                $lockUsages,
+            );
 
             if ($customerUsages >= $promotion->per_customer_usage_limit) {
                 throw new CouponUsageLimitReachedException('You have reached the usage limit for this coupon.');
@@ -96,9 +120,11 @@ class PromotionService
         }
     }
 
-    private function assertMinimumCartAmount(Promotion $promotion, float $subtotal): void
+    private function assertMinimumCartAmount(Promotion $promotion, int $subtotalCents): void
     {
-        if ($subtotal < (float) $promotion->min_cart_amount) {
+        $minimumCents = Money::toCents((string) $promotion->min_cart_amount);
+
+        if ($subtotalCents < $minimumCents) {
             throw new CouponMinimumCartException(
                 'Cart total must be at least '.$promotion->min_cart_amount.' to use this coupon.'
             );
