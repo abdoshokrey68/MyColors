@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Order\Http\Controllers\AdminOrderController;
 use Modules\Order\Http\Controllers\CheckoutController;
 use Modules\Order\Http\Controllers\OrderController;
 
@@ -17,3 +18,12 @@ Route::middleware('auth:sanctum')->group(function () {
         ->whereNumber('id')
         ->name('orders.cancel');
 });
+
+Route::middleware(['auth:sanctum', 'admin'])
+    ->prefix('admin/orders')
+    ->name('admin.orders.')
+    ->group(function () {
+        Route::patch('{id}/status', [AdminOrderController::class, 'updateStatus'])
+            ->whereNumber('id')
+            ->name('status');
+    });

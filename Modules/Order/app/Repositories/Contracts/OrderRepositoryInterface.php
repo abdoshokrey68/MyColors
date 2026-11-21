@@ -4,6 +4,7 @@ namespace Modules\Order\Repositories\Contracts;
 
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Modules\Order\Enums\OrderStatus;
 use Modules\Order\Models\Order;
 
 interface OrderRepositoryInterface
@@ -22,5 +23,9 @@ interface OrderRepositoryInterface
 
     public function lockForUpdateForUser(User $user, int $orderId): ?Order;
 
+    public function lockById(int $orderId): ?Order;
+
     public function markAsCancelled(Order $order): Order;
+
+    public function updateStatus(Order $order, OrderStatus $status): Order;
 }

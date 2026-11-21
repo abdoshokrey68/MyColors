@@ -50,9 +50,23 @@ class OrderRepository implements OrderRepositoryInterface
             ->first();
     }
 
+    public function lockById(int $orderId): ?Order
+    {
+        return Order::query()
+            ->whereKey($orderId)
+            ->with('items')
+            ->lockForUpdate()
+            ->first();
+    }
+
     public function markAsCancelled(Order $order): Order
     {
-        $order->update(['status' => OrderStatus::Cancelled]);
+        return $this->updateStatus($order, OrderStatus::Cancelled);
+    }
+
+    public function updateStatus(Order $order, OrderStatus $status): Order
+    {
+        $order->update(['status' => $status]);
 
         return $order->refresh()->load('items');
     }
