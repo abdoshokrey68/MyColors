@@ -9,11 +9,17 @@ interface PromotionRepositoryInterface
 {
     public function findByCode(string $code): ?Promotion;
 
+    public function lockByCode(string $code): ?Promotion;
+
     public function findById(int $id): ?Promotion;
 
-    public function countUsagesForUser(Promotion $promotion, int $userId): int;
+    public function countUsagesForUser(Promotion $promotion, int $userId, bool $lockForUpdate = false): int;
 
     public function incrementUsedCount(Promotion $promotion): void;
+
+    public function decrementUsedCount(Promotion $promotion): void;
+
+    public function deleteUsageForOrder(int $orderId): void;
 
     public function recordUsage(Promotion $promotion, int $userId, ?int $orderId = null): void;
 

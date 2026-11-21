@@ -3,6 +3,7 @@
 namespace Modules\Promotion\Repositories\Eloquent;
 
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Modules\Promotion\Exceptions\CouponUsageLimitReachedException;
 use Modules\Promotion\Models\Promotion;
 use Modules\Promotion\Models\PromotionUsage;
 use Modules\Promotion\Repositories\Contracts\PromotionRepositoryInterface;
@@ -16,22 +17,64 @@ class PromotionRepository implements PromotionRepositoryInterface
             ->first();
     }
 
+    public function lockByCode(string $code): ?Promotion
+    {
+        return Promotion::query()
+            ->where('code', strtoupper(trim($code)))
+            ->lockForUpdate()
+            ->first();
+    }
+
     public function findById(int $id): ?Promotion
     {
         return Promotion::query()->find($id);
     }
 
-    public function countUsagesForUser(Promotion $promotion, int $userId): int
+    public function countUsagesForUser(Promotion $promotion, int $userId, bool $lockForUpdate = false): int
     {
-        return PromotionUsage::query()
+        $query = PromotionUsage::query()
             ->where('promotion_id', $promotion->id)
-            ->where('user_id', $userId)
-            ->count();
+            ->where('user_id', $userId);
+
+        if ($lockForUpdate) {
+            $query->lockForUpdate();
+        }
+
+        return $query->count();
     }
 
     public function incrementUsedCount(Promotion $promotion): void
     {
-        $promotion->increment('used_count');
+        $affected = Promotion::query()
+            ->whereKey($promotion->id)
+            ->where(function ($query) {
+                $query->whereNull('usage_limit')
+                    ->orWhereColumn('used_count', '<', 'usage_limit');
+            })
+            ->increment('used_count');
+
+        if ($affected === 0) {
+            throw new CouponUsageLimitReachedException;
+        }
+
+        $promotion->refresh();
+    }
+
+    public function decrementUsedCount(Promotion $promotion): void
+    {
+        Promotion::query()
+            ->whereKey($promotion->id)
+            ->where('used_count', '>', 0)
+            ->decrement('used_count');
+
+        $promotion->refresh();
+    }
+
+    public function deleteUsageForOrder(int $orderId): void
+    {
+        PromotionUsage::query()
+            ->where('order_id', $orderId)
+            ->delete();
     }
 
     public function recordUsage(Promotion $promotion, int $userId, ?int $orderId = null): void
