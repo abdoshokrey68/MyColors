@@ -26,4 +26,18 @@ interface ProductRepositoryInterface
     public function decrementStock(Product $product, int $quantity): void;
 
     public function incrementStock(Product $product, int $quantity): void;
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public function create(array $attributes): Product;
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public function update(Product $product, array $attributes): Product;
+
+    public function delete(Product $product): void;
+
+    public function paginateAll(int $perPage = 15): LengthAwarePaginator;
 }
