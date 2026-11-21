@@ -13,8 +13,9 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->string('key');
             $table->string('request_hash', 64);
-            $table->unsignedSmallInteger('response_code');
-            $table->json('response_body');
+            $table->string('status', 20)->default('processing');
+            $table->unsignedSmallInteger('response_code')->nullable();
+            $table->json('response_body')->nullable();
             $table->foreignId('order_id')->nullable()->constrained()->nullOnDelete();
             $table->timestamps();
 

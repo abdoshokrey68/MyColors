@@ -7,7 +7,10 @@ use Closure;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Modules\Order\Enums\IdempotencyKeyStatus;
 use Modules\Order\Exceptions\IdempotencyConflictException;
+use Modules\Order\Exceptions\IdempotencyInProgressException;
 use Modules\Order\Models\IdempotencyKey;
 use Modules\Order\Models\Order;
 
@@ -24,40 +27,51 @@ class IdempotencyService
             'payload' => $request->all(),
         ]));
 
-        $existing = $this->findExisting($user->id, $key);
+        return DB::transaction(function () use ($user, $key, $requestHash, $callback) {
+            $record = $this->reserveOrReplay($user->id, $key, $requestHash);
 
-        if ($existing) {
-            return $this->replayOrConflict($existing, $requestHash);
-        }
+            if ($record instanceof JsonResponse) {
+                return $record;
+            }
 
-        [$order, $response] = $callback();
+            [$order, $response] = $callback();
 
-        try {
-            IdempotencyKey::query()->create([
-                'user_id' => $user->id,
-                'key' => $key,
-                'request_hash' => $requestHash,
+            $record->update([
+                'status' => IdempotencyKeyStatus::Completed,
                 'response_code' => $response->getStatusCode(),
                 'response_body' => $response->getData(true),
                 'order_id' => $order->id,
             ]);
-        } catch (UniqueConstraintViolationException) {
-            $raceWinner = $this->findExisting($user->id, $key);
 
-            if ($raceWinner) {
-                return $this->replayOrConflict($raceWinner, $requestHash);
-            }
-        }
-
-        return $response;
+            return $response;
+        }, 5);
     }
 
-    private function findExisting(int $userId, string $key): ?IdempotencyKey
+    private function reserveOrReplay(int $userId, string $key, string $requestHash): IdempotencyKey|JsonResponse
     {
-        return IdempotencyKey::query()
-            ->where('user_id', $userId)
-            ->where('key', $key)
-            ->first();
+        try {
+            return IdempotencyKey::query()->create([
+                'user_id' => $userId,
+                'key' => $key,
+                'request_hash' => $requestHash,
+                'status' => IdempotencyKeyStatus::Processing,
+                'response_code' => null,
+                'response_body' => null,
+                'order_id' => null,
+            ]);
+        } catch (UniqueConstraintViolationException) {
+            $existing = IdempotencyKey::query()
+                ->where('user_id', $userId)
+                ->where('key', $key)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $existing) {
+                throw new IdempotencyConflictException('Idempotency-Key could not be reserved.');
+            }
+
+            return $this->replayOrConflict($existing, $requestHash);
+        }
     }
 
     private function replayOrConflict(IdempotencyKey $existing, string $requestHash): JsonResponse
@@ -66,6 +80,10 @@ class IdempotencyService
             throw new IdempotencyConflictException;
         }
 
-        return response()->json($existing->response_body, $existing->response_code);
+        if ($existing->status === IdempotencyKeyStatus::Processing) {
+            throw new IdempotencyInProgressException;
+        }
+
+        return response()->json($existing->response_body, (int) $existing->response_code);
     }
 }
