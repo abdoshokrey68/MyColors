@@ -456,6 +456,27 @@
           }
         }
       ]
+    },
+    {
+      "name": "Admin — Orders",
+      "item": [
+        {
+          "name": "Update order status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"paid\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/orders/{{orderId}}/status"
+          }
+        }
+      ]
     }
   ]
 }
