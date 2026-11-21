@@ -2,11 +2,11 @@
 
 namespace Modules\Order\Listeners;
 
-use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Support\Facades\Log;
 use Modules\Order\Events\OrderPlaced;
 
-class ProcessOrderPlaced implements ShouldQueue
+class ProcessOrderPlaced implements ShouldQueueAfterCommit
 {
     public function handle(OrderPlaced $event): void
     {
